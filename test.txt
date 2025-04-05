@@ -1,0 +1,40 @@
+# 异步编程：协程
+# 通过async 定义的函数叫做异步函数(协程函数)  
+# 异步函数调用 会返回一个协程对象
+
+
+async def hello():
+
+    await  page.click('#su')
+    pass
+
+
+async def a():
+
+    await  page.click('#su')
+    pass
+
+async def b():
+
+    await  page.click('#su')
+    pass
+
+
+hello()  ---->协程对象a
+
+import  asyncio
+
+
+asyncio.run(hello())
+
+
+loop = [1234]
+
+#   for 协程 in loop:
+        执行协程里面的代码，执行到await的时候
+
+
+同步：协同步调，从上往下一行一行执行
+异步：步调各异，
+
+# 
