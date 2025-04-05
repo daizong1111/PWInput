@@ -272,8 +272,9 @@ class SortingPage(BasePage):
                 xpath = f'//tr[{index}]//span[text()="就诊"]'
                 await page.locator(xpath).click()
             # 等待一段时间
+            time = self.users.get("time")
             logger.debug(f'账号{self.users.get("id")}正在等待1秒')
-            await page.wait_for_timeout(1000)
+            await page.wait_for_timeout(time * 1000)
             # 3、点击签名提交按钮
             logger.debug(f'账号{self.users.get("id")}正在点击签名提交按钮')
             await page.get_by_role("button", name="签名提交").click()
