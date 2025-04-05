@@ -276,6 +276,18 @@ class SortingPage(BasePage):
                     logger.error(f'账号{self.users.get("id")}点击就诊失败，原因：{e}')
                     # 点击就诊完成按钮
                     logger.debug(f'账号{self.users.get("id")}正在点击就诊完成按钮')
+                    max_retries = 3  # 最大重试次数
+                    retry_count = 0  # 当前重试次数
+                    while retry_count < max_retries:
+                        try:
+                            await page.get_by_role("button", name="就诊完成").click()
+                            break  # 成功点击后退出循环
+                        except Exception as e:
+                            logger.error(f'账号{self.users.get("id")}点击就诊完成按钮失败，原因：{e}')
+                            retry_count += 1  # 增加重试次数
+                            await page.wait_for_timeout(1000)  # 等待1秒后重试
+                        else:
+                            logger.error(f'账号{self.users.get("id")}点击就诊完成按钮失败，达到最大重试次数')
                     await page.get_by_role("button", name = "就诊完成").click()
             # 等待一段时间
             time = self.users.get("time")
