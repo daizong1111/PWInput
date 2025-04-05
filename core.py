@@ -324,7 +324,19 @@ class SortingPage(BasePage):
             logger.debug(f'账号{self.users.get("id")}正在点击签名提交按钮')
             await page.get_by_role("button", name="签名提交").click()
             # 4、弹出弹窗，点击确定按钮
-            logger.debug(f'账号{self.users.get("id")}正在点击确定按钮')
+            retry_count = 0
+            max_retries = 3  # 最大重试次数
+            while retry_count < max_retries:
+                try:
+                    await page.get_by_role("button", name="确定").click()
+                    break  # 成功点击后退出循环
+                except Exception as e:
+                    logger.error(f'账号{self.users.get("id")}点击确定按钮失败，原因：{e}')
+                    retry_count += 1  # 增加重试次数
+                    await page.wait_for_timeout(1000)  # 等待1秒后重试
+            else:
+                logger.error('账号{self.users.get("id")}点击确定按钮失败，达到最大重试次数')
+            # logger.debug(f'账号{self.users.get("id")}正在点击确定按钮')
             await page.get_by_role("button", name="确定").click()
             # 5、点击工作台窗口中的就诊完成按钮
             logger.debug(f'账号{self.users.get("id")}正在点击就诊完成按钮')
