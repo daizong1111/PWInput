@@ -211,6 +211,8 @@ class SortingPage(BasePage):
         """打开分检页面"""
         logger.debug(f'账号{self.users.get("id")}正在点击科室分检')
         await page.click('//li//span[text()="科室分检"]')
+        await page.get_by_placeholder("请选择子科室").click()
+        await page.get_by_role("listitem").click()
         await page.wait_for_timeout(1000)
 
     async def click_room_button(self, page):
