@@ -12,34 +12,34 @@ USERS = [
     #     "password": "Yik.yik@2024",
     #     "type": "nurse"
     # },
-    # {
-    #     "id": "03",
-    #     "username": "xp_test",
-    #     "password": "Yik.yik@2024",
-    #     "type": "nurse"
-    # },
-    #  {
-    #     "id": "04",
-    #     "username": "10212",
-    #     "password": "Yik.yik@2024",
-    #     "type": "sorting",
-    #     "room": "亚健康1室"
-    #   "time": 10
-    # },
+    {
+        "id": "03",
+        "username": "xp_test",
+        "password": "Yik.yik@2024",
+        "type": "nurse"
+    },
+     {
+        "id": "04",
+        "username": "10212",
+        "password": "Yik.yik@2024",
+        "type": "sorting",
+        "room": "亚健康1室",
+      "time": 5
+    },
     {
         "id": "05",
         "username": "10397",
         "password": "Yik.yik@2024",
         "type": "sorting",
         "room": "亚健康2室", 
-        "time": 10
+        "time": 5
     },
     # {
     #     "id": "06",
     #     "username": "10590",
     #     "password": "Yik.yik@2024",
     #     "type": "sorting",
-    #     "room": "妇科二室"
+    #     "room": "妇科二室",
     #     "time": 5
     #  
     # },
@@ -48,7 +48,7 @@ USERS = [
     #     "username": "10120",
     #     "password": "Yik.yik@2024",
     #     "type": "sorting",
-    #     "room": "心电图一室" 
+    #     "room": "心电图一室" ,
     #     "time": 7
     # },
     # {
@@ -56,7 +56,7 @@ USERS = [
     #     "username": "10166",
     #     "password": "Yik.yik@2024",
     #     "type": "sorting",
-    #     "room": "心电图二室" 
+    #     "room": "心电图二室" ,
     #     "time": 7
     # },
     # {
@@ -64,7 +64,7 @@ USERS = [
     #     "username": "10308",
     #     "password": "Yik.yik@2024",
     #     "type": "sorting",
-    #     "room": "腹部彩超一室" 
+    #     "room": "腹部彩超一室" ,
     #     "time": 3
     # },
     # {
@@ -72,7 +72,7 @@ USERS = [
     #     "username": "10676",
     #     "password": "Yik.yik@2024",
     #     "type": "sorting",
-    #     "room": "颈部彩超一室" 
+    #     "room": "颈部彩超一室",
     #     "time": 3
     # },
 

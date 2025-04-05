@@ -9,8 +9,20 @@ import logging
 from faker import Faker
 from playwright.async_api import Playwright
 
+from logging.handlers import RotatingFileHandler  # 添加这行导入
 fc = Faker('zh_CN')
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# 配置日志
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),  # 控制台输出
+        RotatingFileHandler('d:\\PWInput\\app.log', maxBytes=10*1024*1024, backupCount=5)  # 日志文件输出
+    ]
+)
 logger = logging.getLogger(__name__)
 
 
@@ -211,8 +223,20 @@ class SortingPage(BasePage):
         """打开分检页面"""
         logger.debug(f'账号{self.users.get("id")}正在点击科室分检')
         await page.click('//li//span[text()="科室分检"]')
-        await page.get_by_placeholder("请选择子科室").click()
-        await page.get_by_role("listitem").click()
+        max_retries = 3
+        retry_count = 0
+        while retry_count < max_retries:
+            try:
+                await page.get_by_placeholder("请选择子科室").click()
+                await page.get_by_role("listitem").click()
+                break
+            except Exception as e:
+                logger.error(f'账号{self.users.get("id")}点击子科室失败，原因:{e}')
+                retry_count += 1
+                # 等待1秒后重试
+                await page.wait_for_timeout(1000)
+        else:
+            logger.error(f'账号{self.users.get("id")}点击子科室失败，重试次数已达上限')        
         await page.wait_for_timeout(1000)
 
     async def click_room_button(self, page):
@@ -274,6 +298,10 @@ class SortingPage(BasePage):
                     await page.locator(xpath).click()
                 except Exception as e:
                     logger.error(f'账号{self.users.get("id")}点击就诊失败，原因：{e}')
+                    logger.debug(f'账号{self.users.get("id")}正在点击呼叫按钮')
+                    # 点击呼叫或重呼按钮
+                    await page.get_by_label("医生叫号工作台").get_by_role("button", name=re.compile(r'^(呼叫|重呼)$')).click()
+
                     # 点击就诊完成按钮
                     logger.debug(f'账号{self.users.get("id")}正在点击就诊完成按钮')
                     max_retries = 3  # 最大重试次数
@@ -286,12 +314,11 @@ class SortingPage(BasePage):
                             logger.error(f'账号{self.users.get("id")}点击就诊完成按钮失败，原因：{e}')
                             retry_count += 1  # 增加重试次数
                             await page.wait_for_timeout(1000)  # 等待1秒后重试
-                        else:
-                            logger.error(f'账号{self.users.get("id")}点击就诊完成按钮失败，达到最大重试次数')
-                    await page.get_by_role("button", name = "就诊完成").click()
+                    else:
+                        logger.error(f'账号{self.users.get("id")}点击就诊完成按钮失败，达到最大重试次数')
             # 等待一段时间
             time = self.users.get("time")
-            logger.debug(f'账号{self.users.get("id")}正在等待1秒')
+            logger.debug(f'账号{self.users.get("id")}正在等{time}秒')
             await page.wait_for_timeout(time * 1000)
             # 3、点击签名提交按钮
             logger.debug(f'账号{self.users.get("id")}正在点击签名提交按钮')
