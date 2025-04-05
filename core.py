@@ -270,7 +270,13 @@ class SortingPage(BasePage):
             if index:
                 logger.debug(f'账号{self.users.get("id")}正在点击就诊')
                 xpath = f'//tr[{index}]//span[text()="就诊"]'
-                await page.locator(xpath).click()
+                try:
+                    await page.locator(xpath).click()
+                except Exception as e:
+                    logger.error(f'账号{self.users.get("id")}点击就诊失败，原因：{e}')
+                    # 点击就诊完成按钮
+                    logger.debug(f'账号{self.users.get("id")}正在点击就诊完成按钮')
+                    await page.get_by_role("button", name = "就诊完成").click()
             # 等待一段时间
             time = self.users.get("time")
             logger.debug(f'账号{self.users.get("id")}正在等待1秒')
