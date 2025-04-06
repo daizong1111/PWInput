@@ -3,12 +3,20 @@ from playwright.async_api import async_playwright # 异步API
 import asyncio
 from core import PageHande
 from user_data import USERS
+from core import BasePage
 
 
 async def main():
+    # """根据用户数量开启异步任务"""
+    # async with async_playwright() as pw:
+    #     pages = [PageHande(user) for user in USERS]
+    #     await asyncio.gather(*(page.start() for page in pages))
+
     """根据用户数量开启异步任务"""
     async with async_playwright() as pw:
-        pages = [PageHande(pw, user) for user in USERS]
+        # 设置共享的Playwright实例
+        BasePage.set_playwright_instance(pw)
+        pages = [PageHande(user) for user in USERS]
         await asyncio.gather(*(page.start() for page in pages))
 
 

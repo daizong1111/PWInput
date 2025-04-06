@@ -1,5 +1,6 @@
 # @Author  : 木森
 # @weixin: python771
+# from _typeshed import Self
 import re
 # 用于连接到已经打开的Chrome浏览器
 import asyncio
@@ -7,7 +8,10 @@ import asyncio
 import re
 import logging
 from faker import Faker
-from playwright.async_api import Playwright
+# from playwright.async_api import Playwright
+
+# 修复bug
+from playwright.async_api import async_playwright, Playwright
 
 from logging.handlers import RotatingFileHandler  # 添加这行导入
 fc = Faker('zh_CN')
@@ -31,20 +35,29 @@ class BasePage:
     # _lock = asyncio.Lock()  # 类级别的锁，确保线程安全
     _lock = None  # 延迟初始化锁
     _initialized = False  # 新增初始化标志
+    _pw_instance = None  # 新增类级别的Playwright实例
 
     @classmethod
-    async def ensure_lock(cls):
-        """确保锁在正确的事件循环中创建"""
+    def set_playwright_instance(cls, pw_instance):
+        """设置共享的Playwright实例"""
+        cls._pw_instance = pw_instance
+
+    @classmethod
+    async def ensure_resources(cls):
+        """确保所有共享资源在同一个事件循环中初始化"""
         if cls._lock is None:
             cls._lock = asyncio.Lock()
+        
 
-    def __init__(self, pw: Playwright, users: dict):
-        self.pw = pw
+    def __init__(self, users: dict):
+         # 移除pw参数
         self.users = users
         self.browser = None
+        self.pw = None  # 实例级别的pw改为引用类变量
 
-        if BasePage._lock is None:
-            BasePage._lock = asyncio.Lock()  # 在初始化时创建锁
+        # if BasePage._lock is None:
+        #     BasePage._lock = asyncio.Lock()  # 在初始化时创建锁
+
         # logger.info(self.pw)
         # 所有页面共用一个浏览器实例
         # 所有页面共用一个浏览器实例
@@ -55,13 +68,17 @@ class BasePage:
         # self.browser = self.pw.shared_browser
     
     async def initialize_browser(self):
+            # await self.ensure_lock()  # 确保锁已正确初始化
             """异步初始化浏览器实例"""
+            await self.ensure_resources()  # 确保资源初始化
+            self.pw = self._pw_instance  # 使用共享的Playwright实例
+            
             async with self._lock:  # 使用锁确保线程安全
                 # 双重检查确保只初始化一次
-                if not BasePage._initialized or self._shared_browser is None or self._shared_browser.is_closed():   
+                if not self._initialized or self._shared_browser is None or self._shared_browser.is_closed():
                     self._shared_browser = await self.pw.chromium.launch(headless=False)
                     logger.info(f'账号{self.users.get("id")}正在启动浏览器')
-                    BasePage._initialized = True
+                    self._initialized = True
                 self.browser = self._shared_browser
             # 思考题，这行代码为什么不能实现多个用户共享一个浏览器实例？
             # if not hasattr(self.pw, 'shared_browser'):
