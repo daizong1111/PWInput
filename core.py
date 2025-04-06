@@ -31,11 +31,23 @@ class BasePage:
     def __init__(self, pw: Playwright, users: dict):
         self.pw = pw
         self.users = users
+        self.browser = None
+        # logger.info(self.pw)
         # 所有页面共用一个浏览器实例
         # 所有页面共用一个浏览器实例
-        if not hasattr(self.pw, 'shared_browser'):
-            self.pw.shared_browser = asyncio.get_event_loop().run_until_complete(self.pw.chromium.launch(headless=False))
-        self.browser = self.pw.shared_browser
+        # logger.info(f'账号{self.users.get("id")}正在初始化浏览器')
+        # if not hasattr(self.pw, 'shared_browser'):
+        #     self.pw.shared_browser = asyncio.get_event_loop().run_until_complete(self.pw.chromium.launch(headless=False))
+        # logger.info(f'账号{self.users.get("id")}正在启动浏览器')
+        # self.browser = self.pw.shared_browser
+    
+    async def initialize_browser(self):
+            """异步初始化浏览器实例"""
+            if not hasattr(self.pw, 'shared_browser'):
+                self.pw.shared_browser = await self.pw.chromium.launch(headless=False)
+                logger.info(self.pw.shared_browser)
+                logger.info(f'账号{self.users.get("id")}正在启动浏览器')
+            self.browser = self.pw.shared_browser
 
     async def create_page(self):
         """创建新的标签页"""
@@ -402,6 +414,9 @@ class SortingPage(BasePage):
 
 class PageHande(NursePage, SortingPage):
     async def start(self):
+        # 确保浏览器实例已初始化
+        await self.initialize_browser()
+
         if self.users.get('type') == 'nurse':
             await self.nurse_main()
         elif self.users.get('type') == 'sorting':
