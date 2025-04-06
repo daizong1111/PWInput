@@ -198,6 +198,7 @@ class SortingPage(BasePage):
     async def sorting_handle(self, page):
         """分检医生操作"""
         while True:
+
             # 1、点击选择科室
             await self.click_room_button(page)
             i = 0
@@ -213,6 +214,22 @@ class SortingPage(BasePage):
                 elif i >= 10:
                     logger.error(f'账号{self.users.get("id")}连续10秒无数据,刷新页面重新加载当前科室患者数据')
                     await page.reload()
+                    # 刷新后，重新选择科室
+                    max_retries = 3
+                    retry_count = 0
+                    while retry_count < max_retries:
+                        try:
+                            await page.get_by_placeholder("请选择子科室").click()
+                            await page.get_by_role("listitem").click()
+                            break
+                        except Exception as e:
+                            logger.error(f'账号{self.users.get("id")}点击子科室失败，原因:{e}')
+                            retry_count += 1
+                            # 等待1秒后重试
+                            await page.wait_for_timeout(1000)
+                    else:
+                        logger.error(f'账号{self.users.get("id")}点击子科室失败，重试次数已达上限')        
+                    await page.wait_for_timeout(1000)
                     break
                 else:
                     logger.debug(f'账号{self.users.get("id")}当前科室暂无排队患者，正在等待1秒')
@@ -258,7 +275,20 @@ class SortingPage(BasePage):
                     await page.get_by_role("button", name="选择科室").click()
                     logger.debug(f'账号{self.users.get("id")}正在等待科室选项可点击')
                 else:
-                    await page.locator('//div[@class="el-dropdown"]').click()
+                    try_count = 0
+                    max_tries = 3  # 最大重试次数
+                    while try_count < max_tries:
+                        try:
+                            await page.locator('//div[@class="el-dropdown"]').wait_for(state='visible')
+                            await page.locator('//div[@class="el-dropdown"]').click()
+                            break  # 成功等待到元素可见，退出循环
+                        except Exception as e:
+                            logger.error(f'账号{self.users.get("id")}点击选择科室（已存在科室名称）失败，原因：{e}')
+                            try_count += 1  # 增加重试次数
+                            await page.wait_for_timeout(1000)  # 等待1秒后重试
+                    else:
+                        logger.error(f'账号{self.users.get("id")}点击选择科室（已存在科室名称）失败，达到最大重试次数')
+                    # await page.locator('//div[@class="el-dropdown"]').click()
                 # 4、选择科室
                 await page.get_by_role("menuitem", name=room).wait_for(state='visible')
                 logger.debug(f'账号{self.users.get("id")}正在点击科室选项')
