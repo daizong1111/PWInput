@@ -31,6 +31,16 @@ class BasePage:
     def __init__(self, pw: Playwright, users: dict):
         self.pw = pw
         self.users = users
+        # 所有页面共用一个浏览器实例
+        # 所有页面共用一个浏览器实例
+        if not hasattr(self.pw, 'shared_browser'):
+            self.pw.shared_browser = asyncio.get_event_loop().run_until_complete(self.pw.chromium.launch(headless=False))
+        self.browser = self.pw.shared_browser
+
+    async def create_page(self):
+        """创建新的标签页"""
+        context = await self.browser.new_context()
+        return await context.new_page()
 
     async def open_page_login(self, page):
         """登录操作"""
@@ -59,10 +69,13 @@ class NursePage(BasePage):
     async def nurse_main(self):
         # # 获取当前的浏览器上下文和页面
         """护士操作"""
-        browser = await self.pw.chromium.launch(headless=False)
-        # browser = await self.pw.chromium.launch()
-        context = await browser.new_context()
-        page = await context.new_page()
+        # 使用共享浏览器创建新标签页
+        page = await self.create_page()
+
+        # browser = await self.pw.chromium.launch(headless=False)
+        # # browser = await self.pw.chromium.launch()
+        # context = await browser.new_context()
+        # page = await context.new_page()
         try:
             # 进行登录
             await self.open_page_login(page)
@@ -183,9 +196,11 @@ class SortingPage(BasePage):
 
     async def sorting_main(self):
         # 获取当前的浏览器上下文和页面
-        browser = await self.pw.firefox.launch(headless=False)
-        context = await browser.new_context()
-        page = await context.new_page()
+        # browser = await self.pw.firefox.launch(headless=False)
+        # context = await browser.new_context()
+        # page = await context.new_page()
+        # 使用共享浏览器创建新标签页
+        page = await self.create_page()
 
         # 1、打开登录页面进行登录
         await self.open_page_login(page)
