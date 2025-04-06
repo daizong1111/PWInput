@@ -191,6 +191,8 @@ class SortingPage(BasePage):
         await self.open_page_login(page)
         # 2、打开分检页面
         await self.open_sorting_page(page)
+        # 3、为分检医生选择科室
+        await self.choose_room(page)
         await page.wait_for_timeout(1000)
         # 3、进行批量分检操作
         await self.sorting_handle(page)
