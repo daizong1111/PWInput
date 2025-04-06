@@ -28,12 +28,23 @@ logger = logging.getLogger(__name__)
 
 class BasePage:
     _shared_browser = None  # 类级别的共享浏览器实例
-    _lock = asyncio.Lock()  # 类级别的锁，确保线程安全
+    # _lock = asyncio.Lock()  # 类级别的锁，确保线程安全
+    _lock = None  # 延迟初始化锁
+    _initialized = False  # 新增初始化标志
+
+    @classmethod
+    async def ensure_lock(cls):
+        """确保锁在正确的事件循环中创建"""
+        if cls._lock is None:
+            cls._lock = asyncio.Lock()
 
     def __init__(self, pw: Playwright, users: dict):
         self.pw = pw
         self.users = users
         self.browser = None
+
+        if BasePage._lock is None:
+            BasePage._lock = asyncio.Lock()  # 在初始化时创建锁
         # logger.info(self.pw)
         # 所有页面共用一个浏览器实例
         # 所有页面共用一个浏览器实例
@@ -46,9 +57,11 @@ class BasePage:
     async def initialize_browser(self):
             """异步初始化浏览器实例"""
             async with self._lock:  # 使用锁确保线程安全
-                if self._shared_browser is None:
+                # 双重检查确保只初始化一次
+                if not BasePage._initialized or self._shared_browser is None or self._shared_browser.is_closed():   
                     self._shared_browser = await self.pw.chromium.launch(headless=False)
                     logger.info(f'账号{self.users.get("id")}正在启动浏览器')
+                    BasePage._initialized = True
                 self.browser = self._shared_browser
             # 思考题，这行代码为什么不能实现多个用户共享一个浏览器实例？
             # if not hasattr(self.pw, 'shared_browser'):
