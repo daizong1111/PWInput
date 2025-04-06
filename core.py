@@ -240,6 +240,10 @@ class SortingPage(BasePage):
         """打开分检页面"""
         logger.debug(f'账号{self.users.get("id")}正在点击科室分检')
         await page.click('//li//span[text()="科室分检"]')
+
+    
+    async def choose_room(self, page):
+        """前置操作-为分检医生选择科室"""
         max_retries = 3
         retry_count = 0
         while retry_count < max_retries:
@@ -254,10 +258,10 @@ class SortingPage(BasePage):
                 await page.wait_for_timeout(1000)
         else:
             logger.error(f'账号{self.users.get("id")}点击子科室失败，重试次数已达上限')        
-        await page.wait_for_timeout(1000)
+        await page.wait_for_timeout(1000)    
 
     async def click_room_button(self, page):
-        """点击选择科室"""
+        """工作台窗口-点击选择科室"""
         while True:
             try:
                 # 1、点击电脑状图标叫出登记台
@@ -297,6 +301,8 @@ class SortingPage(BasePage):
                 logger.error(f'***【失败】***：账号{self.users.get("id")}点击选择科室失败，原因：{e}')
                 # 刷新页面
                 await page.reload()
+                # 重新为分检医生选择科室
+                await self.choose_room(page)
             else:
                 break
 
