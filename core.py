@@ -7,7 +7,7 @@ import asyncio
 import re
 import logging
 from faker import Faker
-from playwright.async_api import Playwright
+from playwright.async_api import Playwright, expect
 
 fc = Faker('zh_CN')
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -22,18 +22,22 @@ class BasePage:
 
     async def open_page_login(self, page):
         """登录操作"""
-        logger.debug(f'账号{self.users.get("id")}正在打开登录页面')
-        await page.goto('http://113.44.142.29:8069/')
-        logger.debug(f'账号{self.users.get("id")}正在输入用户名')
-        await page.fill('//input[@placeholder="账号"]', self.users.get('username'))
-        logger.debug(f'账号{self.users.get("id")}正在输入密码')
-        await page.fill('//input[@placeholder="密码"]', self.users.get('password'))
-        await page.wait_for_timeout(500)
-        logger.debug(f'账号{self.users.get("id")}正在点击登录按钮')
-        # 等待元素可点击
-        await page.click('//button//span[text()="登 录"]')
-        await page.wait_for_timeout(500)
-        logger.debug(f'账号{self.users.get("id")}登录成功')
+        try:
+            logger.debug(f'账号{self.users.get("id")}正在打开登录页面')
+            await page.goto('http://113.44.142.29:8069/')
+            logger.debug(f'账号{self.users.get("id")}正在输入用户名')
+            await page.fill('//input[@placeholder="账号"]', self.users.get('username'))
+            logger.debug(f'账号{self.users.get("id")}正在输入密码')
+            await page.fill('//input[@placeholder="密码"]', self.users.get('password'))
+            await page.wait_for_timeout(500)
+            logger.debug(f'账号{self.users.get("id")}正在点击登录按钮')
+            # 等待元素可点击
+            await page.click('//button//span[text()="登 录"]')
+            await page.wait_for_timeout(500)
+            logger.debug(f'账号{self.users.get("id")}登录成功')
+        except Exception as e:
+            logger.error(f'账号{self.users.get("id")}登录失败,原因:{e}')
+            await self.open_page_login(page)
 
 
 class NursePage(BasePage):
@@ -171,7 +175,7 @@ class SortingPage(BasePage):
 
     async def sorting_main(self):
         # 获取当前的浏览器上下文和页面
-        browser = await self.pw.firefox.launch(headless=False)
+        browser = await self.pw.chromium.launch(headless=False)
         context = await browser.new_context()
         page = await context.new_page()
 
@@ -200,6 +204,7 @@ class SortingPage(BasePage):
                     await page.wait_for_timeout(1000)
                 elif i >= 10:
                     logger.error(f'账号{self.users.get("id")}连续10秒无数据,刷新页面重新加载当前科室患者数据')
+                    # 10秒无新患者，则刷新页面
                     await page.reload()
                     break
                 else:
@@ -209,23 +214,51 @@ class SortingPage(BasePage):
 
     async def open_sorting_page(self, page):
         """打开分检页面"""
-        logger.debug(f'账号{self.users.get("id")}正在点击科室分检')
-        await page.click('//li//span[text()="科室分检"]')
+        try:
+            logger.debug(f'账号{self.users.get("id")}正在点击科室分检')
+            await page.click('//li//span[text()="科室分检"]')
+        except Exception as e:
+            logger.error(f'账号{self.users.get("id")}打开分检页面失败')
+            await self.open_sorting_page(page)
         await page.wait_for_timeout(1000)
+
+    async def select_department(self, page):
+        """选择科室"""
+        await page.wait_for_timeout(1000)
+        logger.debug(f'账号{self.users.get("id")}正在选择科室')
+        # 点击右上角的科室选择框
+        await page.get_by_role("textbox", name="请选择子科室").click()
+        await page.get_by_role("listitem").click()
+        # 选择完科室，页面会重新加载页面，所以需要等待页面加载完成
+        await page.wait_for_timeout(4000)
+        await page.wait_for_load_state(state="load")
+
+    async def click_icon(self, page):
+        """点击电脑图标，并确认叫号工作台可见"""
+        while True:
+            try:
+                logger.debug(f'账号{self.users.get("id")}正在点击电脑状图标')
+                await page.click('(//div[@class="el-badge item"]/button[@class="el-button el-button--default"])')
+                # 判断医生叫号工作台是否可见
+                await expect(page.get_by_text("医生叫号工作台")).to_be_visible()
+            except Exception as e:
+                logger.error(f'账号{self.users.get("id")}点击电脑状图标失败，开始进行重试操作')
+            else:
+                break
 
     async def click_room_button(self, page):
         """点击选择科室"""
         while True:
             try:
-                # 1、点击电脑状图标叫出登记台
-                logger.debug(f'账号{self.users.get("id")}正在点击电脑状图标')
-                await page.click('(//div[@class="el-badge item"]/button[@class="el-button el-button--default"])')
-                # 2、点击科室名称按钮
+                # 1、右上角科室选择
+                await self.select_department(page)
+                # 2、点击电脑状图标叫出登记台
+                await self.click_icon(page)
+                # 3、获取科室名称按钮
                 room = self.users.get("room")
                 await page.wait_for_timeout(1000)
                 logger.debug(f'账号{self.users.get("id")}正在点击科室名称按钮')
-
-                # 3、点击选择科室
+                # 4、点击选择科室
                 # 判断科室名称按钮是否可见
                 room_button = await page.get_by_role("button", name="选择科室").is_visible()
                 if room_button:
@@ -233,7 +266,7 @@ class SortingPage(BasePage):
                     logger.debug(f'账号{self.users.get("id")}正在等待科室选项可点击')
                 else:
                     await page.locator('//div[@class="el-dropdown"]').click()
-                # 4、选择科室
+                # 5、选择科室
                 await page.get_by_role("menuitem", name=room).wait_for(state='visible')
                 logger.debug(f'账号{self.users.get("id")}正在点击科室选项')
                 await page.get_by_role("menuitem", name=room).click()
@@ -241,21 +274,9 @@ class SortingPage(BasePage):
                 logger.error(f'***【失败】***：账号{self.users.get("id")}点击选择科室失败，原因：{e}')
                 # 刷新页面
                 await page.reload()
+
             else:
                 break
-
-    async def get_row(self, page):
-        """获取就诊人所在行"""
-        # 获取就诊人名字
-        name_string = await page.locator('//span[@class="cp-btnList-info-name"]').inner_text()
-        name = name_string.split('：')[1]
-        logger.debug(f'账号{self.users.get("id")}获取就诊人名字:{name}', )
-        # 判断就诊人名字是否在表格中
-        datas = await page.locator('//div[@class="el-scrollbar"]//tr').all_inner_texts()
-        for i, data in enumerate(datas):
-            if name in data:
-                logger.debug(f'账号{self.users.get("id")}获取就诊人所在行:{i + 1}', )
-                return i + 1
 
     async def visit_handle(self, page):
         """呼叫、就诊操作"""
@@ -263,22 +284,30 @@ class SortingPage(BasePage):
             # 1、点击呼叫
             logger.debug(f'账号{self.users.get("id")}正在点击医生叫号工作台呼叫按钮')
             await page.get_by_label("医生叫号工作台").get_by_role("button", name=re.compile(r'^(呼叫|重呼)$')).click()
-            # 2、获取就诊人所在行，并进行点击
-            index = await self.get_row(page)
-            if index:
+            page.wait_for_timeout(1000)
+            # 2、获取就诊人名字
+            name_string = await page.locator('//span[@class="cp-btnList-info-name"]').inner_text()
+            name = name_string.split('：')[1]
+            logger.debug(f'账号{self.users.get("id")}获取就诊人名字:{name}', )
+            # 3、判断就诊人名字是否存在于页面中
+            xpath = f'//div[@class="tableHeader"]//div[@class="cell"]//p[text()="{name}"]'
+            if await page.locator(xpath).count():
+                # 定位就诊人数据
+                await page.locator(xpath).scroll_into_view_if_needed()
+                await page.locator(xpath).locator('xpath=..').get_by_role("button", name="就诊").click()
+                # 点击就诊人
                 logger.debug(f'账号{self.users.get("id")}正在点击就诊')
-                xpath = f'//tr[{index}]//span[text()="就诊"]'
-                await page.locator(xpath).click()
-            # 等待一段时间
-            logger.debug(f'账号{self.users.get("id")}正在等待1秒')
-            await page.wait_for_timeout(1000)
-            # 3、点击签名提交按钮
-            logger.debug(f'账号{self.users.get("id")}正在点击签名提交按钮')
-            await page.get_by_role("button", name="签名提交").click()
-            # 4、弹出弹窗，点击确定按钮
-            logger.debug(f'账号{self.users.get("id")}正在点击确定按钮')
-            await page.get_by_role("button", name="确定").click()
-            # 5、点击工作台窗口中的就诊完成按钮
+                # 等待一段时间
+                logger.debug(f'账号{self.users.get("id")}正在等待1秒')
+                await page.wait_for_timeout(1000)
+                # 4、点击签名提交按钮
+                logger.debug(f'账号{self.users.get("id")}正在点击签名提交按钮')
+                await page.get_by_role("button", name="签名提交").click()
+                # 5、弹出弹窗，点击确定按钮
+                logger.debug(f'账号{self.users.get("id")}正在点击确定按钮')
+                await page.get_by_role("button", name="确定").click()
+            # 如果就诊人名字不在左侧表格中，则点击就诊完成按钮
+            # 6、点击工作台窗口中的就诊完成按钮
             logger.debug(f'账号{self.users.get("id")}正在点击就诊完成按钮')
             await page.get_by_role("button", name="就诊完成").click()
         except Exception as e:
