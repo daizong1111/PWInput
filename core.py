@@ -298,8 +298,13 @@ class SortingPage(BasePage):
                 # 点击就诊人
                 logger.debug(f'账号{self.users.get("id")}正在点击就诊')
                 # 等待一段时间
-                logger.debug(f'账号{self.users.get("id")}正在等待1秒')
-                await page.wait_for_timeout(1000)
+                # logger.debug(f'账号{self.users.get("id")}正在等待1秒')
+                # await page.wait_for_timeout(1000)
+                # 等待一段时间
+                wait_time = self.users.get('time', 1)   # 默认1秒，转换为毫秒
+                logger.debug(f'账号{self.users.get("id")}正在等待{wait_time}秒') 
+                await page.wait_for_timeout(wait_time * 1000)
+
                 # 4、点击签名提交按钮
                 logger.debug(f'账号{self.users.get("id")}正在点击签名提交按钮')
                 await page.get_by_role("button", name="签名提交").click()
