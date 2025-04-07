@@ -278,41 +278,55 @@ class SortingPage(BasePage):
             else:
                 break
 
+    async def reload_data(self, page):
+        """重新加载页面数据"""
+        await page.reload()
+        await page.wait_for_timeout(5000)
+        await self.click_room_button(page)
+
+    async def click_visit(self, page, name, count):
+        """点击就诊"""
+        # 就诊点击次数是否大于3次，超过3次则重试
+        if count > 3:
+            return
+        try:
+            # 定位就诊人数据
+            await page.get_by_label("待检人员").get_by_text(name).first.scroll_into_view_if_needed()
+            await page.get_by_label("待检人员").get_by_text(name).first.locator('xpath=..').get_by_role("button", name="就诊").click()
+            # 点击就诊人
+            logger.debug(f'账号{self.users.get("id")}正在点击就诊')
+            # 等待一段时间
+            # logger.debug(f'账号{self.users.get("id")}正在等待1秒')
+            time = self.users.get("time")
+            logger.debug(f'账号{self.users.get("id")}正在等待{time}秒')
+            await page.wait_for_timeout(time * 1000)
+            # await page.wait_for_timeout(1000)
+            # 4、点击签名提交按钮
+            logger.debug(f'账号{self.users.get("id")}正在点击签名提交按钮')
+            await page.get_by_role("button", name="签名提交").click()
+            # 5、弹出弹窗，点击确定按钮
+            logger.debug(f'账号{self.users.get("id")}正在点击确定按钮')
+            await page.get_by_role("button", name="确定").click()
+        except Exception as e:
+            logger.error(f'就诊点击失败,开始第{e}次重试试',)
+            count += 1
+            await self.reload_data(page)
+            await self.click_visit(page, name, count)
+
     async def visit_handle(self, page):
         """呼叫、就诊操作"""
         try:
             # 1、点击呼叫
             logger.debug(f'账号{self.users.get("id")}正在点击医生叫号工作台呼叫按钮')
             await page.get_by_label("医生叫号工作台").get_by_role("button", name=re.compile(r'^(呼叫|重呼)$')).click()
-            page.wait_for_timeout(1000)
+            await page.wait_for_timeout(2000)
             # 2、获取就诊人名字
             name_string = await page.locator('//span[@class="cp-btnList-info-name"]').inner_text()
             name = name_string.split('：')[1]
             logger.debug(f'账号{self.users.get("id")}获取就诊人名字:{name}', )
-            # 3、判断就诊人名字是否存在于页面中
-            xpath = f'//div[@class="tableHeader"]//div[@class="cell"]//p[text()="{name}"]'
-            if await page.locator(xpath).count():
-                # 定位就诊人数据
-                await page.locator(xpath).scroll_into_view_if_needed()
-                await page.locator(xpath).locator('xpath=..').get_by_role("button", name="就诊").click()
-                # 点击就诊人
-                logger.debug(f'账号{self.users.get("id")}正在点击就诊')
-                # 等待一段时间
-                # logger.debug(f'账号{self.users.get("id")}正在等待1秒')
-                # await page.wait_for_timeout(1000)
-                # 等待一段时间
-                wait_time = self.users.get('time', 1)   # 默认1秒，转换为毫秒
-                logger.debug(f'账号{self.users.get("id")}正在等待{wait_time}秒') 
-                await page.wait_for_timeout(wait_time * 1000)
-
-                # 4、点击签名提交按钮
-                logger.debug(f'账号{self.users.get("id")}正在点击签名提交按钮')
-                await page.get_by_role("button", name="签名提交").click()
-                # 5、弹出弹窗，点击确定按钮
-                logger.debug(f'账号{self.users.get("id")}正在点击确定按钮')
-                await page.get_by_role("button", name="确定").click()
-            # 如果就诊人名字不在左侧表格中，则点击就诊完成按钮
-            # 6、点击工作台窗口中的就诊完成按钮
+            # 3、点击就诊操作
+            await self.click_visit(page, name, 1)
+            # 4、点击工作台窗口中的就诊完成按钮
             logger.debug(f'账号{self.users.get("id")}正在点击就诊完成按钮')
             await page.get_by_role("button", name="就诊完成").click()
         except Exception as e:
